@@ -91,7 +91,7 @@ pub fn monitor(
         .into_diagnostic()?;
 
     // We are in raw mode until `_raw_mode` is dropped (ie. this function returns).
-    let _raw_mode = RawModeGuard::new();
+    let _raw_mode = RawModeGuard::new()?;
 
     let stdout = stdout();
     let mut stdout = ResolvingPrinter::new(elf, stdout.lock());
@@ -116,24 +116,31 @@ pub fn monitor(
         stdout.flush().ok();
 
         if interactive_mode && poll(Duration::from_secs(0)).into_diagnostic()? {
-            if let Event::Key(key) = read().into_diagnostic()? {
-                if key.kind == KeyEventKind::Press {
-                    if key.modifiers.contains(KeyModifiers::CONTROL) {
-                        match key.code {
-                            KeyCode::Char('c') => break,
-                            KeyCode::Char('r') => {
-                                reset_after_flash(&mut serial, pid).into_diagnostic()?;
-                                continue;
+            match read().into_diagnostic()? {
+                Event::Key(key) => {
+                    if key.kind == KeyEventKind::Press {
+                        if key.modifiers.contains(KeyModifiers::CONTROL) {
+                            match key.code {
+                                KeyCode::Char('c') => break,
+                                KeyCode::Char('r') => {
+                                    reset_after_flash(&mut serial, pid).into_diagnostic()?;
+                                    continue;
+                                }
+                                _ => {}
                             }
-                            _ => {}
+                        }
+
+                        if let Some(bytes) = handle_key_event(key) {
+                            serial.write_all(&bytes).into_diagnostic()?;
+                            serial.flush().into_diagnostic()?;
                         }
                     }
-
-                    if let Some(bytes) = handle_key_event(key) {
-                        serial.write_all(&bytes).into_diagnostic()?;
-                        serial.flush().into_diagnostic()?;
-                    }
                 }
+                Event::Raw(bytes) => {
+                    serial.write_all(&bytes).into_diagnostic()?;
+                    serial.flush().into_diagnostic()?
+                }
+                _ => {}
             }
         }
     }

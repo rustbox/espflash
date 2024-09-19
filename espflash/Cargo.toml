@@ -33,7 +33,9 @@ clap = { version = "4.5.4", features = [
 ], optional = true }
 clap_complete = { version = "4.5.2", optional = true }
 comfy-table = { version = "7.1.1", optional = true }
-crossterm = { version = "0.25.0", optional = true } # 0.26.x and 0.27.x causes issues on Windows
+crossterm = { git = "https://github.com/rustbox/crossterm", rev = "1d223fd2bca8b7df795d4f047ad54f7b39edbdbd", optional = true, features = [
+    "unfiltered-events",
+] } # 0.26.x and 0.27.x causes issues on Windows
 ctrlc = { version = "3.4.4", optional = true }
 # defmt dependencies are pinned since defmt does not guarantee MSRV even for patch releases
 defmt-decoder = { version = "0.3.11", features = [
